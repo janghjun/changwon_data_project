@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>창원시 교통 데이터 Pre-Analysis 시각화 (5-1 ~ 5-4)</title>
+  <!-- css 로직 -->
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --panel: #12141a;
+      --surface: #181b23;
+      --muted: #9aa3b2;
+      --text: #e6e9ef;
+      --brand: #5b9aff;
+      --accent: #7ee787;
+      --warn: #ffcc66;
+      --danger: #ff7b72;
+      --radius: 14px;
+      --gap: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+                   Ubuntu, Cantarell, 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
+    }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: var(--gap);
+      padding: var(--gap);
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .side {
+      background: linear-gradient(180deg, var(--panel), #0f1117);
+      border: 1px solid #1f2430;
+      border-radius: var(--radius);
+      padding: 18px;
+      position: sticky; top: var(--gap); height: calc(100vh - 2*var(--gap));
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+    }
+    .brand-badge {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: radial-gradient(100% 100% at 60% 0%, var(--brand), #6ea8ff);
+      box-shadow: inset 0 0 12px rgba(255,255,255,0.2), 0 6px 22px rgba(91,154,255,0.25);
+    }
+    .brand h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
+    .small { color: var(--muted); font-size: 12px; }
+
+    .nav {
+      display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
+    }
+    .nav button {
+      width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid #232836; background: #141824; color: var(--text);
+      cursor: pointer; transition: 120ms ease;
+    }
+    .nav button.active { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(91,154,255,0.2) inset; }
+    .nav button:hover { background: #161b2a; }
+
+    .tips {
+      margin-top: auto; padding: 12px; border-radius: 10px; background: #11131a; border: 1px solid #202636;
+      font-size: 12px; color: var(--muted);
+    }
+
+    /* Main */
+    .main { display: grid; gap: var(--gap); }
+    .card {
+      background: var(--surface); border: 1px solid #232836; border-radius: var(--radius);
+      padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.22);
+    }
+
+    .header { display:flex; flex-wrap: wrap; gap: 10px; align-items: baseline; justify-content: space-between; }
+    .header h2 { margin: 0; font-size: 18px; }
+    .tabs { display: flex; gap: 8px; }
+    .tab-btn {
+      padding: 8px 12px; border-radius: 10px; border: 1px solid #2a3142; background: #151a27; color: var(--text);
+      cursor: pointer; transition: 120ms ease; font-size: 13px;
+    }
+    .tab-btn.active { border-color: var(--brand); background: #101828; }
+    .chip { font-size: 12px; color: var(--muted); }
+
+    .subtabs { margin-top: 8px; display: flex; gap: 8px; }
+    .subtab-btn { padding: 6px 10px; border: 1px dashed #2a3142; border-radius: 8px; background: #111522; color: var(--text); cursor: pointer; }
+    .subtab-btn.active { border-color: var(--accent); background: #10171f; }
+
+    .grid { display: grid; gap: 14px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    @media (min-width: 1060px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+    .map-iframe {
+      width: 100%; height: 560px; border: 0; border-radius: 12px; background: #0d0f15;
+    }
+
+    .placeholder {
+      padding: 16px; border: 1px dashed #3a4255; border-radius: 12px; color: var(--muted); background: #0f1219;
+    }
+
+    .caption { color: var(--muted); font-size: 13px; }
+    .spacer { height: 6px; }
+
+    .imgbox { background:#0f1219; border:1px solid #1f2430; border-radius:12px; padding:10px; }
+    .imgbox img { width: 100%; height: auto; display:block; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">
+        <div class="brand-badge"></div>
+        <div>
+          <h1>창원시 교통 데이터 EDA</h1>
+          <div class="small">5-1 ~ 5-4 | Pre-Analysis</div>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="active" data-section="5-1">5-1 정류소 분포 · 허브</button>
+        <button data-section="5-2">5-2 노선 라인 · 밀도</button>
+        <button data-section="5-3">5-3 정시성/빈도 (headway)</button>
+        <button data-section="5-4">5-4 산업단지 접근성</button>
+      </div>
+      <div class="tips">
+        <div><strong>자산 배치 안내</strong></div>
+        <div><code>assets/maps</code>, <code>assets/img</code></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- Section container -->
+      <div id="section-container" class="card">
+        <!--JS-->
+      </div>
+
+      <div class="card caption">
+        ⚑ 지도는 Colab에서 진행한 시각화 내용에 대한 Folium 결과 HTML을 iframe으로 삽입하고 있습니다. 일부 브라우저에서 <code>file://</code>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 섹션별 설명 텍스트 & 자산 경로 정의
+const CONFIG = {
+  '5-1': {
+    title: '5-1. 정류소 분포 · 밀집도 · 허브',
+    expl: `
+[메인 아이디어]
+• 모든 정류소를 점(클러스터)로 표시하고 HeatMap으로 밀집 영역(핫존)을 확인합니다.
+• route_stops를 이용해 정류소별 경유 노선 수(n_routes)를 계산하고, 허브(Top N)를 강조합니다.
+
+[사용 데이터 / 컬럼]
+• stops_std.csv: station_id, station_name, lat, lon
+• route_stops_std.csv: route_id, station_id  (정류소별 경유 노선 수 집계용)
+
+[시각화가 보여주는 것 (읽는 법)]
+• 점군/클러스터: 정류소 커버리지와 공백 지역을 한눈에 확인
+• HeatMap: 생활/상업/업무 중심으로 추정 가능한 밀집핫존 시각화
+• 허브 강조: 환승·거점 후보(경유 노선 수가 많은 정류소) 파악
+
+[품질 점검 / 주의]
+• 좌표 이상치(0, 창원 외 범위) 제거 필요
+• n_routes는 route_id 중복 제거(nunique)로 계산
+• 허브 Top N이 특정 권역에 과도하게 몰리면 N 조정 또는 기준 재검토
+
+[튜닝 파라미터]
+• 허브 Top N (기본 50 → 30/70 조정)
+• HeatMap radius/blur (권장 10~18)
+• 마커 radius(2~8): 브라우저 성능 고려
+
+[산출물(자산 경로)]
+• 지도: assets/maps/stops_overview_hub_heat.html
+• 차트: assets/img/n_routes_hist.png, assets/img/top_hubs_bar.png
+    `.trim(),
+    charts: [
+      { src: 'assets/img/n_routes_hist.png', caption: '정류소 n_routes 분포(수치형)' },
+      { src: 'assets/img/top_hubs_bar.png', caption: '허브 상위 15개(범주형 막대)' },
+    ],
+    map: 'assets/maps/stops_overview_hub_heat.html',
+  },
+
+  '5-2': {
+    title: '5-2. 노선 근사 라인 · 노선 밀도(정류소 기반)',
+    expl: `
+[메인 아이디어]
+• route_stops의 station_ord(정류소 순번)로 정렬해 좌표를 직선 연결(PolyLine) → 노선 '근사' 라인 표현.
+• 노선 도형이 없으므로 정류소 밀집 HeatMap으로 노선 밀도 축을 근사합니다.
+
+[사용 데이터 / 컬럼]
+• route_stops_std.csv: route_id, station_id, station_ord(없으면 그룹 누적 인덱스로 생성)
+• stops_std.csv: station_id, lat, lon
+• routes_std.csv(선택): routetp/route_tp(노선 유형 분포 막대차트)
+
+[시각화가 보여주는 것 (읽는 법)]
+• 근사 라인: 간선 축/방향성 대략 파악(실제 도로 선형과 완전 동일하진 않음)
+• HeatMap: 노선이 밀집된 축(정류소 밀도) 가늠
+• Top30 노선의 정류소 수: 대규모/중요 노선망 후보
+
+[품질 점검 / 주의]
+• station_ord 혼재/누락 시 경로 왜곡 가능 → 코드에서 보수적 생성 로직 포함
+• 상·하행 혼재로 왕복처럼 보일 수 있음(정상)
+• 정확한 노선 도형이 반드시 필요하면 추후 도로망 매칭/공식 도형 API 검토
+
+[튜닝 파라미터]
+• 표시 노선 수: Top 30 → 20~50 조정
+• HeatMap radius/blur: 8~16
+
+[산출물(자산 경로)]
+• 지도: assets/maps/routes_lines_density.html
+• 차트: assets/img/stops_per_route_bar.png, assets/img/routes_type_counts.png(선택)
+    `.trim(),
+    charts: [
+      { src: 'assets/img/stops_per_route_bar.png', caption: '노선별 정류소 수(Top 30)' },
+      { src: 'assets/img/routes_type_counts.png', caption: '노선 유형 분포(있을 때)' },
+    ],
+    map: 'assets/maps/routes_lines_density.html',
+  },
+
+  '5-3': {
+    title: '5-3. 정시성/빈도 품질 (headway_mean · cv)',
+    expl: `
+[메인 아이디어]
+• 정류소 레벨 headway 요약을 지도에 시각화: 원 크기=평균 배차간격(mean), 불투명도=cv(변동성).
+• 히스토그램으로 mean/cv 분포 확인 → 문제 구간/핫스폿 후보 식별.
+
+[사용 데이터 / 컬럼]
+• step3_arrivals/headway_station_*.csv:
+  - station_id, headway_mean_s, headway_std_s, headway_cv, n_pairs, n_routes
+• stops_std.csv: station_id, lat, lon (좌표 조인)
+
+[시각화가 보여주는 것 (읽는 법)]
+• 큰 원 = 평균 간격이 큼 → 배차 드묾
+• 진한 원(불투명) = cv 큼 → 변동성 큼(정시성 불안정)
+• 히스토그램: 전체 분포(중위수, 꼬리, 이질 군집) 확인
+
+[품질 점검 / 주의]
+• n_headways가 적으면(cv=0 또는 비정상치) 해석 주의 → n_headways ≥ 3 필터 권장
+• 관측 시간대 혼재 시 혼합 분포 → 피크 시간대 별도 지도 생성 고려
+• 극단치 영향 완화 위해 5~95% 분위수 클리핑 적용(시각화 안정화 목적)
+
+[튜닝 파라미터]
+• 원 크기/불투명도 스케일, 분위수 범위(0.05/0.95 → 0.1/0.9 등)
+• n_headways 하한(3/5/10…)
+
+[산출물(자산 경로)]
+• 지도: assets/maps/station_headway_quality.html
+• 차트: assets/img/headway_hist.png, assets/img/cv_hist.png
+    `.trim(),
+    charts: [
+      { src: 'assets/img/headway_hist.png', caption: 'headway_mean 분포(수치형)' },
+      { src: 'assets/img/cv_hist.png', caption: 'headway_cv 분포(수치형)' },
+    ],
+    map: 'assets/maps/station_headway_quality.html',
+  },
+
+  '5-4': {
+    title: '5-4. 산업단지 오버레이 · 최근접 정류소 거리',
+    expl: `
+[메인 아이디어]
+• 산업단지 경계(Polygon)와 센트로이드를 정류소 레이어와 함께 지도에 오버레이.
+• 센트로이드에서 최근접 정류소까지의 직선거리(Haversine, m) 분포를 통해 1차 접근성 진단.
+
+[사용 데이터 / 컬럼]
+• industrial_parks_cw_parklevel.geojson: park_id, area_m2, geometry(Polygon)
+• stops_std.csv: lat, lon (정류소 좌표)
+
+[시각화가 보여주는 것 (읽는 법)]
+• 경계 + 센트로이드 + 정류소 점 → 단지 주변 커버리지의 지리적 감 확보
+• 거리 분포: 가까울수록(예: 400~500m 이내) 도보 접근성 양호로 가정
+  - 꼬리(먼 단지): 접근성 취약 후보
+
+[품질 점검 / 주의]
+• 현재는 직선거리 근사 → 실제 접근시간과 차이(도보/버스 네트워크 반영 필요)
+• 특이 형상은 representative_point() 고려(센트로이드가 외부에 위치할 수 있음)
+• 면적은 투영 좌표계에서 계산해야 정확(전처리에서 처리됨)
+
+[튜닝 파라미터]
+• “근접” 기준선(400m/500m), 반경 내 정류소 개수 등 지표 확장
+• 정류소 가중치(n_routes/headway 품질)로 접근성 합성지수 확장 가능
+
+[산출물(자산 경로)]
+• 지도: assets/maps/industrial_parks_overlay.html
+• 차트: assets/img/dist_hist.png
+    `.trim(),
+    charts: [
+      { src: 'assets/img/dist_hist.png', caption: '산업단지 → 최근접 정류소 직선거리 분포(수치형)' },
+    ],
+    map: 'assets/maps/industrial_parks_overlay.html',
+  },
+};
+
+// JS 로직
+    let currentSection = '5-1';
+    let currentTab = 'expl'; // 'expl' | 'viz'
+    let currentSub = 'basic'; // 'basic' | 'map'
+
+    const sectionContainer = document.getElementById('section-container');
+    const navButtons = document.querySelectorAll('.nav button');
+
+    function setActiveNav(section) {
+      navButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.section === section);
+      });
+    }
+
+    function imgEl(src, caption) {
+      const wrap = document.createElement('div');
+      wrap.className = 'imgbox';
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = caption || '';
+      img.loading = 'lazy';
+      img.onerror = () => {
+        wrap.innerHTML = `<div class="placeholder">이미지를 찾을 수 없습니다: <code>${src}</code><br/>assets/img 경로와 파일명을 확인하세요.</div>`;
+      };
+      const cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = caption || '';
+      wrap.appendChild(img);
+      wrap.appendChild(cap);
+      return wrap;
+    }
+
+    function iframeEl(src) {
+      const wrap = document.createElement('div');
+      const iframe = document.createElement('iframe');
+      iframe.className = 'map-iframe';
+      iframe.src = src;
+      iframe.loading = 'lazy';
+      iframe.onerror = () => {
+        wrap.innerHTML = `<div class="placeholder">지도를 불러올 수 없습니다: <code>${src}</code><br/>assets/maps 경로와 파일명을 확인하거나 서버 확인하세요.</div>`;
+      };
+      wrap.appendChild(iframe);
+      return wrap;
+    }
+
+    function render() {
+      const cfg = CONFIG[currentSection];
+      const root = document.createElement('div');
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'header';
+      header.innerHTML = `
+        <div>
+          <h2>${cfg.title}</h2>
+          <div class="chip">Section ${currentSection}</div>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn ${currentTab==='expl'?'active':''}" data-tab="expl">설명</button>
+          <button class="tab-btn ${currentTab==='viz'?'active':''}" data-tab="viz">시각화</button>
+        </div>`;
+      root.appendChild(header);
+
+      // Body
+      const body = document.createElement('div');
+      body.style.marginTop = '10px';
+
+      if (currentTab === 'expl') {
+        const box = document.createElement('div');
+        box.className = 'placeholder';
+        box.style.whiteSpace = 'pre-wrap';
+        box.textContent = cfg.expl;
+        body.appendChild(box);
+      } else {
+        // Sub tabs
+        const subtabs = document.createElement('div');
+        subtabs.className = 'subtabs';
+        subtabs.innerHTML = `
+          <button class="subtab-btn ${currentSub==='basic'?'active':''}" data-sub="basic">기초적 시각화</button>
+          <button class="subtab-btn ${currentSub==='map'?'active':''}" data-sub="map">지도 상세 시각화</button>`;
+        body.appendChild(subtabs);
+        body.appendChild(document.createElement('div')).className='spacer';
+
+        if (currentSub === 'basic') {
+          const grid = document.createElement('div');
+          grid.className = 'grid grid-2';
+          if (cfg.charts && cfg.charts.length) {
+            cfg.charts.forEach(ch => grid.appendChild(imgEl(ch.src, ch.caption)));
+          } else {
+            const ph = document.createElement('div');
+            ph.className = 'placeholder';
+            ph.textContent = '등록된 기초 차트가 없습니다.';
+            grid.appendChild(ph);
+          }
+          body.appendChild(grid);
+        } else {
+          // map
+          body.appendChild(iframeEl(cfg.map));
+        }
+      }
+
+      sectionContainer.innerHTML = '';
+      sectionContainer.appendChild(header);
+      sectionContainer.appendChild(body);
+
+      // Attach tab handlers
+      header.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentTab = btn.dataset.tab; render();
+        });
+      });
+      const st = body.querySelectorAll('.subtab-btn');
+      st.forEach(btn => btn.addEventListener('click', () => { currentSub = btn.dataset.sub; render(); }));
+    }
+
+    // Nav handlers
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentSection = btn.dataset.section; setActiveNav(currentSection); render();
+      });
+    });
+
+    // 초기 렌더
+    setActiveNav(currentSection); render();
+  </script>
+</body>
+</html>
